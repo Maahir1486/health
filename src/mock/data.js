@@ -28,16 +28,11 @@ export const initialResources = [
 
 
 export const mockUsers = {
-    student: {
-        id: 'u1',
-        name: 'Maahir',
-        role: 'student',
-        email: 'maahir@student.edu'
-    },
     admin: {
         id: 'a1',
         name: 'Praveen Kumar',
         role: 'admin',
-        email: 'pkumar@admin.edu'
+        email: 'pkumar@admin.edu',
+        password: 'admin123'
     }
 };

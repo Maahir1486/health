@@ -2,7 +2,10 @@ import React from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import Dashboard from './Dashboard';
 import Resources from './Resources';
-import { LayoutDashboard, BookHeart } from 'lucide-react';
+import ResourceDetail from './ResourceDetail';
+import MyResources from './MyResources';
+import SmartWatch from './SmartWatch';
+import { LayoutDashboard, BookHeart, Heart, Watch } from 'lucide-react';
 
 const StudentLayout = () => {
     const location = useLocation();
@@ -10,6 +13,8 @@ const StudentLayout = () => {
     const navItems = [
         { path: '/student', name: 'Dashboard', icon: LayoutDashboard },
         { path: '/student/resources', name: 'Resources', icon: BookHeart },
+        { path: '/student/my-resources', name: 'My Resources', icon: Heart },
+        { path: '/student/smart-sync', name: 'Smart Sync', icon: Watch },
     ];
 
     return (
@@ -22,7 +27,9 @@ const StudentLayout = () => {
                     </div>
                     {navItems.map((item) => {
                         const Icon = item.icon;
-                        const isActive = location.pathname === item.path;
+                        const isActive = (item.path === '/student/resources' || item.path === '/student/my-resources' || item.path === '/student/smart-sync')
+                            ? location.pathname.startsWith(item.path)
+                            : location.pathname === item.path;
 
                         if (item.isExternal) {
                             return (
@@ -59,6 +66,9 @@ const StudentLayout = () => {
                 <Routes>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/resources" element={<Resources />} />
+                    <Route path="/resources/:id" element={<ResourceDetail />} />
+                    <Route path="/my-resources" element={<MyResources />} />
+                    <Route path="/smart-sync" element={<SmartWatch />} />
                 </Routes>
             </div>
         </div>

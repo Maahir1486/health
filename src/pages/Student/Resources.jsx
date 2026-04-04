@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { initialResources } from '../../mock/data';
 import { Search, Filter, PlayCircle, FileText, BookOpen } from 'lucide-react';
 
 const Resources = () => {
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState('All');
     const [resources, setResources] = useState(() => {
@@ -24,7 +26,9 @@ const Resources = () => {
         switch (type) {
             case 'Video': return <PlayCircle className="h-6 w-6 text-indigo-500" />;
             case 'Article': return <FileText className="h-6 w-6 text-emerald-500" />;
-            default: return <BookOpen className="h-6 w-6 text-blue-500" />;
+            case 'Blog': return <BookOpen className="h-6 w-6 text-orange-500" />;
+            case 'Post': return <FileText className="h-6 w-6 text-blue-500" />;
+            default: return <BookOpen className="h-6 w-6 text-indigo-400" />;
         }
     };
 
@@ -90,7 +94,10 @@ const Resources = () => {
                                 {resource.description}
                             </p>
 
-                            <button className="w-full mt-auto py-2.5 bg-slate-50 hover:bg-primary-50 text-primary-700 font-medium rounded-xl border border-slate-200 hover:border-primary-200 transition-colors">
+                            <button 
+                                onClick={() => navigate('/student/resources/' + resource.id)}
+                                className="w-full mt-auto py-2.5 bg-slate-50 hover:bg-primary-50 text-primary-700 font-medium rounded-xl border border-slate-200 hover:border-primary-200 transition-colors"
+                            >
                                 View Resource
                             </button>
                         </div>

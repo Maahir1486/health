@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/layout/Navbar';
 import Home from './pages/Home/index';
 import Login from './pages/Auth/Login';
+import Signup from './pages/Auth/Signup';
 
 import StudentLayout from './pages/Student/index';
 import AdminLayout from './pages/Admin/index';
@@ -21,6 +22,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
       <Route
         path="/student/*"
         element={
