@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Plus, Edit2, Trash2, Search, ExternalLink, PlayCircle, FileText, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+// Note: MyResources stores personal student bookmarks in localStorage (per-user).
+// These are separate from admin-managed resources served from the Spring Boot API.
 
 const MyResources = () => {
     const { user } = useAuth();

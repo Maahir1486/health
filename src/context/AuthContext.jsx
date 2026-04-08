@@ -1,8 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
-import { mockUsers } from '../mock/data';
-
-// Hardcoded admin access key
-const ADMIN_ACCESS_KEY = 'mad*456';
+import { authAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -13,79 +10,67 @@ export const AuthProvider = ({ children }) => {
     });
 
     /**
-     * adminLogin(email, accessKey)
-     * Admin logs in with any email + the access key 'mad*456'.
-     * Returns { success: true } or { success: false, message: '...' }
+     * register(name, email, password)
+     * Calls POST /api/auth/register — Spring Boot creates user, returns JWT.
      */
-    const adminLogin = (email, accessKey) => {
-        if (!email.trim()) return { success: false, message: 'Email is required.' };
-        if (accessKey !== ADMIN_ACCESS_KEY) {
-            return { success: false, message: 'Invalid admin access key.' };
+    const register = async (name, email, password) => {
+        try {
+            const { data } = await authAPI.register({ name, email, password });
+            _saveSession(data);
+            return { success: true };
+        } catch (err) {
+            const message = err.response?.data?.message || 'Registration failed. Please try again.';
+            return { success: false, message };
         }
-        const loggedIn = {
-            id: mockUsers.admin.id,
-            name: mockUsers.admin.name,
-            email: email.trim().toLowerCase(),
-            role: 'admin',
-        };
-        setUser(loggedIn);
-        localStorage.setItem('wellnest_user', JSON.stringify(loggedIn));
-        return { success: true };
     };
 
     /**
      * login(email, password)
-     * Student-only login — validates against localStorage registered users.
-     * Returns { success: true } or { success: false, message: '...' }
+     * Calls POST /api/auth/login — validates student credentials via Spring Boot.
      */
-    const login = (email, password) => {
-        const registeredRaw = localStorage.getItem('wellnest_registered_users');
-        const registered = registeredRaw ? JSON.parse(registeredRaw) : [];
-        const found = registered.find(
-            (u) =>
-                u.email.toLowerCase() === email.trim().toLowerCase() &&
-                u.password === password
-        );
-        if (!found) {
-            return { success: false, message: 'Invalid email or password.' };
+    const login = async (email, password) => {
+        try {
+            const { data } = await authAPI.login({ email, password });
+            _saveSession(data);
+            return { success: true };
+        } catch (err) {
+            const message = err.response?.data?.message || 'Invalid email or password.';
+            return { success: false, message };
         }
-        const loggedIn = { id: found.id, name: found.name, email: found.email, role: 'student' };
-        setUser(loggedIn);
-        localStorage.setItem('wellnest_user', JSON.stringify(loggedIn));
-        return { success: true };
     };
 
     /**
-     * register(name, email, password)
-     * Student sign-up — saves to localStorage and auto-logs in.
-     * Returns { success: true } or { success: false, message: '...' }
+     * adminLogin(email, accessKey)
+     * Calls POST /api/auth/admin-login — verifies access key server-side.
      */
-    const register = (name, email, password) => {
-        const registeredRaw = localStorage.getItem('wellnest_registered_users');
-        const registered = registeredRaw ? JSON.parse(registeredRaw) : [];
-        const alreadyExists = registered.some(
-            (u) => u.email.toLowerCase() === email.trim().toLowerCase()
-        );
-        if (alreadyExists) {
-            return { success: false, message: 'An account with this email already exists.' };
+    const adminLogin = async (email, accessKey) => {
+        try {
+            const { data } = await authAPI.adminLogin({ email, accessKey });
+            _saveSession(data);
+            return { success: true };
+        } catch (err) {
+            const message = err.response?.data?.message || 'Invalid admin access key.';
+            return { success: false, message };
         }
-        const newUser = {
-            id: `u_${Date.now()}`,
-            name: name.trim(),
-            email: email.trim().toLowerCase(),
-            password,
-            role: 'student',
-        };
-        localStorage.setItem('wellnest_registered_users', JSON.stringify([...registered, newUser]));
-        const loggedIn = { id: newUser.id, name: newUser.name, email: newUser.email, role: 'student' };
-        setUser(loggedIn);
-        localStorage.setItem('wellnest_user', JSON.stringify(loggedIn));
-        return { success: true };
     };
 
     const logout = () => {
         setUser(null);
         localStorage.removeItem('wellnest_user');
+        localStorage.removeItem('wellnest_token');
+    };
+
+    // Persist JWT + user profile from API response
+    const _saveSession = (data) => {
+        const profile = {
+            id:    data.id,
+            name:  data.name,
+            email: data.email,
+            role:  data.role.toLowerCase(),
+        };
+        setUser(profile);
+        localStorage.setItem('wellnest_user', JSON.stringify(profile));
+        localStorage.setItem('wellnest_token', data.token);
     };
 
     return (

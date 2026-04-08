@@ -1,37 +1,53 @@
 import React, { useState, useEffect } from 'react';
-import { initialResources } from '../../mock/data';
-import { Plus, Edit2, Trash2, Search } from 'lucide-react';
+import { resourcesAPI } from '../../services/api';
+import { Plus, Edit2, Trash2, Search, Loader2 } from 'lucide-react';
 
 const ManageResources = () => {
-    const [resources, setResources] = useState(() => {
-        const saved = localStorage.getItem('wellnest_resources');
-        return saved ? JSON.parse(saved) : initialResources;
-    });
+    const [resources, setResources] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingResource, setEditingResource] = useState(null);
+    const [saving, setSaving] = useState(false);
 
-    // Form State
-    const [formData, setFormData] = useState({ title: '', category: 'Mental Health', type: 'Article', description: '', url: '' });
+    const [formData, setFormData] = useState({
+        title: '', category: 'Mental Health', type: 'Article', description: '', url: ''
+    });
 
-    useEffect(() => {
-        localStorage.setItem('wellnest_resources', JSON.stringify(resources));
-    }, [resources]);
+    // Fetch all resources from Spring Boot
+    const fetchResources = async () => {
+        try {
+            setLoading(true);
+            const { data } = await resourcesAPI.getAll();
+            setResources(data);
+        } catch {
+            setError('Failed to load resources. Is the backend running?');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    const handleDelete = (id) => {
-        if (window.confirm('Are you sure you want to delete this resource?')) {
-            setResources(resources.filter(r => r.id !== id));
+    useEffect(() => { fetchResources(); }, []);
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this resource?')) return;
+        try {
+            await resourcesAPI.delete(id);
+            setResources(prev => prev.filter(r => r.id !== id));
+        } catch {
+            alert('Failed to delete resource.');
         }
     };
 
     const handleEdit = (resource) => {
         setEditingResource(resource);
-        setFormData({ 
-            title: resource.title, 
-            category: resource.category, 
-            type: resource.type, 
+        setFormData({
+            title: resource.title,
+            category: resource.category,
+            type: resource.type,
             description: resource.description,
-            url: resource.url || '' 
+            url: resource.url || '',
         });
         setIsModalOpen(true);
     };
@@ -42,19 +58,23 @@ const ManageResources = () => {
         setIsModalOpen(true);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (editingResource) {
-            setResources(resources.map(r => r.id === editingResource.id ? { ...r, ...formData } : r));
-        } else {
-            const newResource = {
-                id: 'r' + Date.now(),
-                ...formData,
-                createdAt: new Date().toISOString()
-            };
-            setResources([newResource, ...resources]);
+        setSaving(true);
+        try {
+            if (editingResource) {
+                const { data } = await resourcesAPI.update(editingResource.id, formData);
+                setResources(prev => prev.map(r => r.id === editingResource.id ? data : r));
+            } else {
+                const { data } = await resourcesAPI.create(formData);
+                setResources(prev => [data, ...prev]);
+            }
+            setIsModalOpen(false);
+        } catch {
+            alert('Failed to save resource. Please try again.');
+        } finally {
+            setSaving(false);
         }
-        setIsModalOpen(false);
     };
 
     const filteredResources = resources.filter(r =>
@@ -78,6 +98,12 @@ const ManageResources = () => {
                 </button>
             </div>
 
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                    {error}
+                </div>
+            )}
+
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <div className="p-4 border-b border-slate-100 bg-slate-50/50">
                     <div className="relative w-full max-w-md">
@@ -93,63 +119,70 @@ const ManageResources = () => {
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50 text-slate-500 text-sm tracking-wide border-b border-slate-100">
-                                <th className="px-6 py-4 font-medium">Title</th>
-                                <th className="px-6 py-4 font-medium">Category</th>
-                                <th className="px-6 py-4 font-medium">Type</th>
-                                <th className="px-6 py-4 font-medium text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {filteredResources.map(resource => (
-                                <tr key={resource.id} className="hover:bg-slate-50/50 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <p className="font-semibold text-slate-800">{resource.title}</p>
-                                        <p className="text-sm text-slate-500 truncate max-w-xs">{resource.description}</p>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-medium">
-                                            {resource.category}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-slate-600 font-medium text-sm">
-                                        {resource.type}
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <button
-                                                onClick={() => handleEdit(resource)}
-                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                title="Edit"
-                                            >
-                                                <Edit2 className="h-4 w-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(resource.id)}
-                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                title="Delete"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
-                                        </div>
-                                    </td>
+                    {loading ? (
+                        <div className="flex items-center justify-center py-16 gap-3 text-slate-500">
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                            Loading resources from server...
+                        </div>
+                    ) : (
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50 text-slate-500 text-sm tracking-wide border-b border-slate-100">
+                                    <th className="px-6 py-4 font-medium">Title</th>
+                                    <th className="px-6 py-4 font-medium">Category</th>
+                                    <th className="px-6 py-4 font-medium">Type</th>
+                                    <th className="px-6 py-4 font-medium text-right">Actions</th>
                                 </tr>
-                            ))}
-                            {filteredResources.length === 0 && (
-                                <tr>
-                                    <td colSpan="4" className="px-6 py-12 text-center text-slate-500">
-                                        No resources found. Try adjusting your search.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {filteredResources.map(resource => (
+                                    <tr key={resource.id} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <p className="font-semibold text-slate-800">{resource.title}</p>
+                                            <p className="text-sm text-slate-500 truncate max-w-xs">{resource.description}</p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-medium">
+                                                {resource.category}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-slate-600 font-medium text-sm">
+                                            {resource.type}
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    onClick={() => handleEdit(resource)}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="Edit"
+                                                >
+                                                    <Edit2 className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(resource.id)}
+                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {filteredResources.length === 0 && (
+                                    <tr>
+                                        <td colSpan="4" className="px-6 py-12 text-center text-slate-500">
+                                            No resources found.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             </div>
 
-            {/* Basic Modal for Add/Edit */}
+            {/* Add / Edit Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 font-sans">
@@ -160,9 +193,7 @@ const ManageResources = () => {
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
                                 <input
-                                    required
-                                    type="text"
-                                    value={formData.title}
+                                    required type="text" value={formData.title}
                                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                     className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
                                 />
@@ -196,10 +227,9 @@ const ManageResources = () => {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Resource URL (YouTube, Blog, etc.)</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Resource URL</label>
                                 <input
-                                    required
-                                    type="url"
+                                    required type="url"
                                     placeholder="https://example.com/resource"
                                     value={formData.url}
                                     onChange={(e) => setFormData({ ...formData, url: e.target.value })}
@@ -209,12 +239,10 @@ const ManageResources = () => {
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
                                 <textarea
-                                    required
-                                    rows="3"
-                                    value={formData.description}
+                                    required rows="3" value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                     className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none"
-                                ></textarea>
+                                />
                             </div>
                             <div className="flex gap-3 justify-end mt-8">
                                 <button
@@ -226,8 +254,10 @@ const ManageResources = () => {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-5 py-2.5 bg-primary-600 text-white font-medium hover:bg-primary-700 rounded-xl transition-colors shadow-sm"
+                                    disabled={saving}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white font-medium hover:bg-primary-700 rounded-xl transition-colors shadow-sm disabled:opacity-60"
                                 >
+                                    {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                                     Save Resource
                                 </button>
                             </div>
