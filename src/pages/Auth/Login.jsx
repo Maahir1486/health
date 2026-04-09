@@ -32,33 +32,47 @@ const Login = () => {
     };
 
     /* ── Student submit ── */
-    const handleStudentSubmit = (e) => {
+    const handleStudentSubmit = async (e) => {
         e.preventDefault();
         setError('');
         if (!email.trim()) return setError('Email is required.');
         if (!password)     return setError('Password is required.');
+        
         setLoading(true);
-        setTimeout(() => {
-            const result = login(email, password);
+        try {
+            const result = await login(email, password);
+            if (result.success) {
+                navigate('/student');
+            } else {
+                setError(result.message);
+            }
+        } catch (err) {
+            setError('An unexpected error occurred. Please try again.');
+        } finally {
             setLoading(false);
-            if (result.success) navigate('/student');
-            else setError(result.message);
-        }, 400);
+        }
     };
 
     /* ── Admin submit ── */
-    const handleAdminSubmit = (e) => {
+    const handleAdminSubmit = async (e) => {
         e.preventDefault();
         setError('');
         if (!adminEmail.trim()) return setError('Email is required.');
         if (!accessKey)         return setError('Access key is required.');
+        
         setLoading(true);
-        setTimeout(() => {
-            const result = adminLogin(adminEmail, accessKey);
+        try {
+            const result = await adminLogin(adminEmail, accessKey);
+            if (result.success) {
+                navigate('/admin');
+            } else {
+                setError(result.message);
+            }
+        } catch (err) {
+            setError('An unexpected error occurred. Please try again.');
+        } finally {
             setLoading(false);
-            if (result.success) navigate('/admin');
-            else setError(result.message);
-        }, 400);
+        }
     };
 
     return (

@@ -16,7 +16,7 @@ const Signup = () => {
     const [error, setError]                 = useState('');
     const [loading, setLoading]             = useState(false);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
 
@@ -27,15 +27,18 @@ const Signup = () => {
                                   return setError('Passwords do not match.');
 
         setLoading(true);
-        setTimeout(() => {
-            const result = register(name, email, password);
-            setLoading(false);
+        try {
+            const result = await register(name, email, password);
             if (result.success) {
                 navigate('/student');
             } else {
                 setError(result.message || 'Registration failed. Please try again.');
             }
-        }, 400);
+        } catch (err) {
+            setError('An unexpected error occurred. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     /* ----- helpers ----- */
